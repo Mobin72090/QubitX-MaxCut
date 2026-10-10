@@ -1,0 +1,13 @@
+layout_name,num_qubits,optimization_level,seed_transpiler,orig_depth,orig_total_ops,orig_2q_gates,orig_swap_count,transpiled_depth,transpiled_total_ops,transpiled_2q_gates,transpiled_swap_count,swap_overhead,transpilation_time_sec
+"Development Linear Chain (4 qubits, 1D line) (opt_level=1)",4,1,42,7,13,5,0,11,15,7,2,2,0.01924
+"Development Linear Chain (4 qubits, 1D line) (opt_level=2)",4,2,42,7,13,5,0,11,15,7,2,2,0.00968
+"Development Linear Chain (4 qubits, 1D line) (opt_level=3)",4,3,42,7,13,5,0,11,15,7,2,2,0.00955
+"Development Ring Layout (4 qubits, 1D ring) (opt_level=1)",4,1,42,7,13,5,0,8,15,7,2,2,0.00639
+"Development Ring Layout (4 qubits, 1D ring) (opt_level=2)",4,2,42,7,13,5,0,8,15,7,2,2,0.00885
+"Development Ring Layout (4 qubits, 1D ring) (opt_level=3)",4,3,42,7,13,5,0,8,15,7,2,2,0.01271
+"Development 2D Grid (2x2, 4 qubits) (opt_level=1)",4,1,42,7,13,5,0,11,15,7,2,2,0.0068
+"Development 2D Grid (2x2, 4 qubits) (opt_level=2)",4,2,42,7,13,5,0,11,15,7,2,2,0.00826
+"Development 2D Grid (2x2, 4 qubits) (opt_level=3)",4,3,42,7,13,5,0,11,15,7,2,2,0.00881
+"Development Fully Connected (4 qubits, all-to-all) (opt_level=1)",4,1,42,7,13,5,0,7,13,5,0,0,0.00635
+"Development Fully Connected (4 qubits, all-to-all) (opt_level=2)",4,2,42,7,13,5,0,7,13,5,0,0,0.00836
+"Development Fully Connected (4 qubits, all-to-all) (opt_level=3)",4,3,42,7,13,5,0,7,13,5,0,0,0.00834

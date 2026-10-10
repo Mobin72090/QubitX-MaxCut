@@ -23,6 +23,21 @@ from src.transpilation import (
 )
 
 
+def _save_csv_dual(df: pd.DataFrame, primary_path: str) -> None:
+    """Helper function to save benchmark DataFrame to both results/tables/ and results/."""
+    filename = os.path.basename(primary_path)
+    paths = [
+        primary_path,
+        os.path.join("results", "tables", filename),
+        os.path.join("results", filename),
+    ]
+    for p in paths:
+        if p:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            df.to_csv(p, index=False)
+
+
+
 def calculate_optimal_probability(
     counts: dict[str, int],
     graph: nx.Graph,
@@ -168,10 +183,9 @@ def run_qaoa_benchmark(
 
     df = pd.DataFrame(results_data)
 
-    # Save to CSV under results/
+    # Save to CSV under results/ and results/tables/
     if output_csv:
-        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-        df.to_csv(output_csv, index=False)
+        _save_csv_dual(df, output_csv)
 
     return df
 
@@ -282,8 +296,7 @@ def run_processor_ab_benchmark(
     df = pd.DataFrame(results_data)
 
     if output_csv:
-        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-        df.to_csv(output_csv, index=False)
+        _save_csv_dual(df, output_csv)
 
     return df
 
@@ -378,8 +391,7 @@ def run_graph_size_routing_sweep(
     df = pd.DataFrame(sweep_records)
 
     if output_csv:
-        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-        df.to_csv(output_csv, index=False)
+        _save_csv_dual(df, output_csv)
 
     return df
 

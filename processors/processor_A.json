@@ -1,0 +1,14 @@
+{
+  "processor_id": "processor_A",
+  "processor_name": "Processor A (Provisional 5-Qubit Tree)",
+  "num_qubits": 5,
+  "edges": [
+    [0, 1],
+    [1, 2],
+    [1, 3],
+    [3, 4]
+  ],
+  "configuration_status": "provisional_development_example",
+  "is_official_specification": false,
+  "notes": "Provisional 5-qubit branching/tree graph. Reconstructed for SWAP bottleneck modeling. Official hackathon specification pending."
+}

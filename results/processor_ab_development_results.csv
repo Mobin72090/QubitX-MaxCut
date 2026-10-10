@@ -1,5 +1,5 @@
 processor_id,processor_name,configuration_status,is_official_specification,physical_qubits,logical_qubits,edges,qaoa_depth_p,shots,seed_simulator,seed_transpiler,exact_max_cut_value,opt_expected_cut,best_sampled_cut,approx_ratio_expected,approx_ratio_best,optimal_solution_prob,top_bitstring,top_bitstring_prob,orig_depth,orig_2q_gates,transpiled_depth,transpiled_2q_gates,transpiled_swap_count,swap_overhead,transpilation_time_sec
-processor_a_dev,Processor A (Development 5-Qubit Tree),provisional_development_example,False,5,4,5,1,2048,42,42,7.0,5.9678,7.0,0.8525,1.0,0.2393,0010,0.1221,7,5,11,7,2,2,0.00999
-processor_b_dev,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),provisional_development_example,False,7,4,5,1,2048,42,42,7.0,5.9678,7.0,0.8525,1.0,0.2393,0010,0.1221,7,5,11,7,2,2,0.009
-processor_a_dev,Processor A (Development 5-Qubit Tree),provisional_development_example,False,5,4,5,2,2048,42,42,7.0,5.5166,7.0,0.7881,1.0,0.3145,0010,0.1626,12,10,18,13,3,3,0.00992
-processor_b_dev,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),provisional_development_example,False,7,4,5,2,2048,42,42,7.0,5.5166,7.0,0.7881,1.0,0.3145,0010,0.1626,12,10,18,13,3,3,0.00956
+processor_A,Processor A (Provisional 5-Qubit Tree),provisional_development_example,False,5,4,5,1,1000,42,42,7.0,6.006,7.0,0.858,1.0,0.231,0010,0.121,7,5,11,7,2,2,0.04501
+processor_B,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),provisional_development_example,False,7,4,5,1,1000,42,42,7.0,6.006,7.0,0.858,1.0,0.231,0010,0.121,7,5,11,7,2,2,0.00975
+processor_A,Processor A (Provisional 5-Qubit Tree),provisional_development_example,False,5,4,5,2,1000,42,42,7.0,5.389,7.0,0.7699,1.0,0.344,0010,0.185,12,10,18,13,3,3,0.00926
+processor_B,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),provisional_development_example,False,7,4,5,2,1000,42,42,7.0,5.389,7.0,0.7699,1.0,0.344,0010,0.185,12,10,18,13,3,3,0.0084

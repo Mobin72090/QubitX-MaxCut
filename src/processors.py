@@ -141,22 +141,30 @@ def create_coupling_map_from_config(data: dict[str, Any]) -> tuple[CouplingMap, 
 def load_development_processors() -> dict[str, tuple[dict[str, Any], CouplingMap, str]]:
     """Load both Processor A and Processor B development configurations.
 
+    Checks for processor_A.json and processor_B.json first, falling back to
+    processor_a_dev.json and processor_b_dev.json if needed.
+
     Returns:
         dict mapping processor_id -> (data_dict, coupling_map, descriptive_label).
     """
     configs = {}
-    processor_files = [
-        PROCESSORS_DIR / "processor_a_dev.json",
-        PROCESSORS_DIR / "processor_b_dev.json",
+    processor_pairs = [
+        ("processor_A.json", "processor_a_dev.json"),
+        ("processor_B.json", "processor_b_dev.json"),
     ]
 
-    for pfile in processor_files:
+    for primary_name, dev_name in processor_pairs:
+        primary_path = PROCESSORS_DIR / primary_name
+        dev_path = PROCESSORS_DIR / dev_name
+
+        pfile = primary_path if primary_path.exists() else dev_path
         raw_data = load_processor_config(pfile)
         val_data = validate_processor_data(raw_data, file_label=pfile.name)
         cm, desc = create_coupling_map_from_config(val_data)
         configs[val_data["processor_id"]] = (val_data, cm, desc)
 
     return configs
+
 
 
 def inspect_processor_transpilation_layouts(

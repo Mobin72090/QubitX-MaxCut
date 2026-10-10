@@ -209,54 +209,69 @@ def plot_qaoa_performance_by_depth(
 def generate_all_plots(
     qaoa_benchmark_csv: str = "results/qaoa_benchmark_results.csv",
     transpilation_csv: str = "results/transpilation_metrics.csv",
-    output_dir: str = "results/plots",
+    output_dir: str = "results/figures",
 ) -> list[str]:
     """Load benchmark CSVs and generate all publication-quality comparison charts.
+
+    Saves plot figures under both results/figures/ and results/plots/ for full compatibility.
 
     Args:
         qaoa_benchmark_csv: Path to qaoa_benchmark_results.csv.
         transpilation_csv: Path to transpilation_metrics.csv.
-        output_dir: Target directory for plot PNG files.
+        output_dir: Primary target directory for plot PNG files (default 'results/figures').
 
     Returns:
         list[str]: List of created image file paths.
     """
     created_files = []
-    os.makedirs(output_dir, exist_ok=True)
+    output_dirs = [output_dir, "results/plots"]
+
+    for d in output_dirs:
+        os.makedirs(d, exist_ok=True)
+
+    # Check primary tables directory if default path missing
+    if not os.path.exists(qaoa_benchmark_csv) and os.path.exists("results/tables/qaoa_benchmark_results.csv"):
+        qaoa_benchmark_csv = "results/tables/qaoa_benchmark_results.csv"
+
+    if not os.path.exists(transpilation_csv) and os.path.exists("results/tables/transpilation_metrics.csv"):
+        transpilation_csv = "results/tables/transpilation_metrics.csv"
 
     # 1. Generate plots from qaoa_benchmark_results.csv if present
     if os.path.exists(qaoa_benchmark_csv):
         df_bench = pd.read_csv(qaoa_benchmark_csv)
-        p1 = plot_qaoa_performance_by_depth(
-            df_bench, os.path.join(output_dir, "qaoa_performance_by_depth.png")
-        )
-        created_files.append(p1)
+        for target_dir in output_dirs:
+            p1 = plot_qaoa_performance_by_depth(
+                df_bench, os.path.join(target_dir, "qaoa_performance_by_depth.png")
+            )
+            created_files.append(p1)
 
-        p2 = plot_transpilation_depth(
-            df_bench, os.path.join(output_dir, "transpilation_depth.png")
-        )
-        created_files.append(p2)
+            p2 = plot_transpilation_depth(
+                df_bench, os.path.join(target_dir, "transpilation_depth.png")
+            )
+            created_files.append(p2)
 
-        p3 = plot_swap_and_gate_overhead(
-            df_bench, os.path.join(output_dir, "swap_gate_overhead.png")
-        )
-        created_files.append(p3)
+            p3 = plot_swap_and_gate_overhead(
+                df_bench, os.path.join(target_dir, "swap_gate_overhead.png")
+            )
+            created_files.append(p3)
 
     # 2. Alternatively / additionally plot from transpilation_metrics.csv
     elif os.path.exists(transpilation_csv):
         df_trans = pd.read_csv(transpilation_csv)
-        p2 = plot_transpilation_depth(
-            df_trans, os.path.join(output_dir, "transpilation_depth.png")
-        )
-        created_files.append(p2)
+        for target_dir in output_dirs:
+            p2 = plot_transpilation_depth(
+                df_trans, os.path.join(target_dir, "transpilation_depth.png")
+            )
+            created_files.append(p2)
 
-        p3 = plot_swap_and_gate_overhead(
-            df_trans, os.path.join(output_dir, "swap_gate_overhead.png")
-        )
-        created_files.append(p3)
+            p3 = plot_swap_and_gate_overhead(
+                df_trans, os.path.join(target_dir, "swap_gate_overhead.png")
+            )
+            created_files.append(p3)
     else:
         raise FileNotFoundError(
             f"Neither benchmark CSV ({qaoa_benchmark_csv}) nor transpilation CSV ({transpilation_csv}) was found."
         )
 
-    return created_files
+    return list(dict.fromkeys(created_files))
+

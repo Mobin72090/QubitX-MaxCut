@@ -1,0 +1,17 @@
+{
+  "processor_id": "processor_b_dev",
+  "processor_name": "Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit)",
+  "num_qubits": 7,
+  "edges": [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [1, 5],
+    [3, 6]
+  ],
+  "configuration_status": "provisional_development_example",
+  "is_official_specification": false,
+  "ambiguity_note": "Inferred from Heavy-Hex illustration. Physical node numbering and edge index mapping are unverified and subject to change when official hackathon backend specifications are released by organizers.",
+  "notes": "Provisional 7-qubit topology for SWAP bottleneck benchmarking. Not verified as exact organizer graph."
+}

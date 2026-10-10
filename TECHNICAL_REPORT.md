@@ -7,31 +7,31 @@
 
 ---
 
-## 1. Executive Summary & Problem Statement
+## 1. Executive Summary & Core Hackathon Principle
 
-Combinatorial optimization on noisy intermediate-scale quantum (NISQ) devices requires balancing algorithmic solution quality with hardware execution overhead. The **Weighted Max-Cut** problem is a canonical NP-hard problem where the objective is to partition the vertices of a weighted graph \(G = (V, E)\) into two disjoint sets such that the sum of edge weights crossing the cut is maximized.
+The core objective of Phase 1 is **not merely to report algorithm execution outputs**, but to demonstrate **how the exact same quantum optimization solution behaves across two distinct processor architectures**, using empirical, measured evidence to explain the performance differences.
 
-In this project, Team **QubitX** built a reproducible Python and Qiskit framework to:
-1. Construct parameterized Quantum Approximate Optimization Algorithm (QAOA) circuits for weighted Max-Cut.
-2. Establish exact ground-truth baselines using a brute-force classical solver.
-3. Transpile logical QAOA circuits onto hardware coupling topologies to quantify **SWAP gate overhead** and circuit depth inflation.
-4. Execute noise-free simulation benchmarks to analyze the trade-off between QAOA depth \(p\), solution quality, and transpilation bottlenecks.
+In this project, Team **QubitX** implemented a modular Python and Qiskit framework to solve the **Weighted Max-Cut** problem using the **Quantum Approximate Optimization Algorithm (QAOA)**. By keeping all algorithmic variables strictly controlled (identical logical problem graph, QAOA depth \(p\), classical optimizer settings, measurement shots, simulator seed `42`, and transpiler seed `42`), we evaluated how circuit transpilation and routing SWAP bottlenecks behave on two different hardware topologies:
 
-> **Hardware Disclaimer:** All processor connectivity layouts analyzed in this report (Linear Chain, Ring Layout, 2D Grid, Fully Connected) are clearly labeled development examples used for bottleneck modeling. They do not represent official hackathon organizer-provided specifications and can be updated when official Processor A and Processor B specs are released.
+1. **Processor A (`processor_a_dev`)**: A 5-qubit branching tree topology (`[[0, 1], [1, 2], [1, 3], [3, 4]]`).
+2. **Processor B (`processor_b_dev`)**: A 7-qubit Heavy-Hex sub-unit topology (`[[0, 1], [1, 2], [2, 3], [3, 4], [1, 5], [3, 6]]`).
+
+> **Provisional Specification Disclaimer:**  
+> Processor configurations in `processors/` are provisional development topologies reconstructed for SWAP bottleneck modeling. They do not represent official organizer-provided hardware specifications. When official Processor A and Processor B specs are published, their `.json` files can be dropped into `processors/` to run automated benchmarks immediately.
 
 ---
 
 ## 2. Mathematical Formulation
 
 ### 2.1 Weighted Max-Cut Objective
-Let \(G = (V, E)\) be an undirected graph with vertex set \(V = \{0, 1, \dots, n-1\}\) and positive edge weights \(w_{ij} > 0\) for \((i,j) \in E\). Assign a binary decision variable \(x_i \in \{0, 1\}\) to each node \(i \in V\), representing its partition assignment.
+Let \(G = (V, E)\) be an undirected graph with vertex set \(V = \{0, 1, \dots, n-1\}\) and positive edge weights \(w_{ij} > 0\) for \((i,j) \in E\). Assign a binary decision variable \(x_i \in \{0, 1\}\) to each node \(i \in V\).
 
-The total weight of edges crossing the cut is given by:
+The total weight of edges crossing the cut is:
 \[
 C(x) = \sum_{(i,j) \in E} w_{ij} \left( x_i + x_j - 2 x_i x_j \right)
 \]
 
-In terms of spin variables \(s_i \in \{-1, +1\}\) where \(s_i = 1 - 2x_i\):
+In terms of spin variables \(s_i = 1 - 2x_i \in \{-1, +1\}\):
 \[
 C(s) = \sum_{(i,j) \in E} w_{ij} \left( \frac{1 - s_i s_j}{2} \right)
 \]
@@ -41,7 +41,7 @@ Mapping spin variables \(s_i\) to Pauli \(Z_i\) operators yields the Max-Cut cos
 \[
 H_C = \frac{1}{2} \sum_{(i,j) \in E} w_{ij} Z_i Z_j
 \]
-Maximizing the cut value \(C(x)\) is equivalent to minimizing the expectation value \(\langle H_C \rangle\).
+Maximizing cut value \(C(x)\) corresponds to minimizing expectation value \(\langle H_C \rangle\).
 
 The standard QAOA transverse-field mixer Hamiltonian is:
 \[
@@ -49,126 +49,84 @@ H_B = \sum_{i \in V} X_i
 \]
 
 ### 2.3 Unitary Evolution & Circuit Gates
-For a depth-\(p\) QAOA circuit with variational parameter vectors \(\boldsymbol{\gamma} = (\gamma_1, \dots, \gamma_p)\) and \(\boldsymbol{\beta} = (\beta_1, \dots, \beta_p)\):
+For a depth-\(p\) QAOA circuit with parameter vectors \(\boldsymbol{\gamma} = (\gamma_1, \dots, \gamma_p)\) and \(\boldsymbol{\beta} = (\beta_1, \dots, \beta_p)\):
 
-1. **Initial State Preparation**:
-   \[
-   |\psi_0\rangle = |+\rangle^{\otimes n} = H^{\otimes n} |0\rangle^{\otimes n}
-   \]
-
-2. **Cost Unitary Layer \(U(C, \gamma_k)\)**:
-   \[
-   U(C, \gamma_k) = e^{-i \gamma_k H_C} = \prod_{(i,j) \in E} e^{-i \frac{\gamma_k w_{ij}}{2} Z_i Z_j}
-   \]
-   In Qiskit, each edge term is implemented using a two-qubit rotation gate: `rzz(2 * gamma_k * w_ij, q_i, q_j)`.
-
-3. **Mixer Unitary Layer \(U(B, \beta_k)\)**:
-   \[
-   U(B, \beta_k) = e^{-i \beta_k H_B} = \prod_{i \in V} e^{-i \beta_k X_i}
-   \]
-   Each node term is implemented using a single-qubit rotation gate: `rx(2 * beta_k, q_i)`.
-
-4. **Full Parameterized State**:
-   \[
-   |\boldsymbol{\gamma}, \boldsymbol{\beta}\rangle = U(B, \beta_p) U(C, \gamma_p) \cdots U(B, \beta_1) U(C, \gamma_1) |\psi_0\rangle
-   \]
+1. **Initial State**: \(|\psi_0\rangle = |+\rangle^{\otimes n} = H^{\otimes n} |0\rangle^{\otimes n}\).
+2. **Cost Unitary \(U(C, \gamma_k)\)**: Implemented using Qiskit `rzz(2 * gamma_k * w_ij, q_i, q_j)` gates for each weighted edge.
+3. **Mixer Unitary \(U(B, \beta_k)\)**: Implemented using Qiskit `rx(2 * beta_k, q_i)` gates for each node.
+4. **State Vector**: \(|\boldsymbol{\gamma}, \boldsymbol{\beta}\rangle = U(B, \beta_p) U(C, \gamma_p) \cdots U(B, \beta_1) U(C, \gamma_1) |\psi_0\rangle\).
 
 ---
 
-## 3. Project Architecture & Implementation
+## 3. Controlled Experimental Setup
 
-The repository follows a clean, modular structure in [`src/`](file:///c:/Projects/QubitX-MaxCut/src):
+To ensure valid comparative evidence, all parameters were held strictly constant:
 
-- **[`src/graph_utils.py`](file:///c:/Projects/QubitX-MaxCut/src/graph_utils.py)**: Defines NetworkX graph creation, graph validation, cut value evaluation, and `solve_max_cut_brute_force()` to establish exact ground-truth baselines.
-- **[`src/qaoa_builder.py`](file:///c:/Projects/QubitX-MaxCut/src/qaoa_builder.py)**: Builds parameterized Qiskit `QuantumCircuit` instances, handles Qiskit right-to-left bitstring endianness (`bitstring[-1]` \(\rightarrow\) qubit 0), computes expected cut values \(\langle C \rangle\), and optimizes parameters using SciPy `COBYLA`.
-- **[`src/transpilation.py`](file:///c:/Projects/QubitX-MaxCut/src/transpilation.py)**: Generates development coupling maps (Linear, Ring, Grid, Fully Connected), validates connectivity, counts actual 2-qubit instructions (`op.num_qubits == 2`), and calculates routing SWAP overhead.
-- **[`src/benchmarking.py`](file:///c:/Projects/QubitX-MaxCut/src/benchmarking.py)**: Executes end-to-end benchmark suites combining exact ground truth, optimization results, and transpilation bottlenecks, exporting to CSV.
-- **[`src/visualization.py`](file:///c:/Projects/QubitX-MaxCut/src/visualization.py)**: Generates publication-quality 300 DPI figures under [`results/plots/`](file:///c:/Projects/QubitX-MaxCut/results/plots).
-
----
-
-## 4. Experimental Setup
-
-All experiments were executed in the project virtual environment on Windows using the exact parameters below:
-
-- **Development Problem Graph**: 4 nodes (\(n=4\)), 5 weighted edges:
-  - Edges: `(0, 1, weight=2.0)`, `(0, 2, weight=1.0)`, `(1, 2, weight=3.0)`, `(1, 3, weight=2.0)`, `(2, 3, weight=1.0)`.
-- **Simulation Environment**: Qiskit Aer (`AerSimulator`).
-- **QAOA Configurations**: Depths \(p \in \{1, 2\}\), measurement shots = 1000 / 2048.
-- **Classical Optimizer**: SciPy `COBYLA` with `maxiter = 25` to `40`.
+- **Simulation Engine**: Qiskit Aer (`AerSimulator`).
+- **Optimization Strategy**: SciPy `COBYLA` with `maxiter = 25` to `40`.
+- **Measurement Shots**: `shots = 1000` / `2048` per circuit evaluation.
 - **Random Seeds**:
   - `seed_simulator = 42` (reproducible initial points & shot sampling).
   - `seed_transpiler = 42` (deterministic transpilation routing).
-- **Development Hardware Coupling Topologies**:
-  1. **Linear Chain**: 1D line `0 - 1 - 2 - 3`
-  2. **Ring Layout**: 1D ring `0 - 1 - 2 - 3 - 0`
-  3. **2D Grid**: 2x2 mesh
-  4. **Fully Connected**: All-to-all connectivity (0 routing SWAPs baseline)
+- **Target Processor Topologies**:
+  - `processor_a_dev` (5 physical qubits, tree graph).
+  - `processor_b_dev` (7 physical qubits, Heavy-Hex sub-unit graph).
 
 ---
 
-## 5. Empirical Results & Analysis
+## 4. Measured Comparative Evidence
 
-### 5.1 Exact Ground-Truth Baseline
-Exhaustive brute-force evaluation over all \(2^4 = 16\) binary partitions established:
-- **Maximum Cut Value (\(C_{\text{max}}\))**: **`7.0`**
-- **Optimal Partitions**: `{0: 0, 1: 1, 2: 0, 3: 0}` and its bit-flip symmetric partner `{0: 1, 1: 0, 2: 1, 3: 1}`.
+### 4.1 Case 1: 4-Node Problem Graph Comparison (Isomorphic Subgraph Embedding)
 
-### 5.2 QAOA Solution Quality & Transpilation Metrics Table
+Extracted directly from [`results/processor_ab_development_results.csv`](file:///c:/Projects/QubitX-MaxCut/results/processor_ab_development_results.csv):
 
-The table below presents empirical benchmark data extracted directly from [`results/qaoa_benchmark_results.csv`](file:///c:/Projects/QubitX-MaxCut/results/qaoa_benchmark_results.csv):
+| QAOA Depth \(p\) | Processor ID | Physical Qubits (\(N\)) | Logical Qubits (\(n\)) | Physical Layout Selected | Transpiled Depth | Logical 2Q Gates | Transpiled 2Q Gates | SWAP Overhead | Expected Cut \(\langle C \rangle\) | Approx Ratio |
+| :---: | :--- | :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **p=1** | `processor_a_dev` | 5 | 4 | `{q[0]:1, q[1]:0, q[2]:3, q[3]:2}` | **11** | 5 | 7 | **2** | 6.006 | **85.8%** |
+| **p=1** | `processor_b_dev` | 7 | 4 | `{q[0]:1, q[1]:0, q[2]:2, q[3]:5}` | **11** | 5 | 7 | **2** | 6.006 | **85.8%** |
+| **p=2** | `processor_a_dev` | 5 | 4 | `{q[0]:1, q[1]:0, q[2]:3, q[3]:2}` | **18** | 10 | 13 | **3** | 5.389 | **77.0%** |
+| **p=2** | `processor_b_dev` | 7 | 4 | `{q[0]:1, q[1]:0, q[2]:2, q[3]:5}` | **18** | 10 | 13 | **3** | 5.389 | **77.0%** |
 
-| Depth \(p\) | Development Coupling Layout | Logical Depth | Transpiled Depth | Logical 2Q Gates | Transpiled 2Q Gates | SWAP Overhead | Expected Cut \(\langle C \rangle\) | Approx Ratio (\(\langle C \rangle / C_{\text{max}}\)) | Optimal Sol. Prob |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **p=1** | Linear Chain (`0-1-2-3`) | 7 | **11** | 5 | 7 | **2** | 6.006 | **0.8580** (85.8%) | **23.1%** |
-| **p=1** | Ring Layout (`0-1-2-3-0`) | 7 | **8** | 5 | 7 | **2** | 6.006 | **0.8580** (85.8%) | **23.1%** |
-| **p=1** | 2D Grid (`2x2`) | 7 | **11** | 5 | 7 | **2** | 6.006 | **0.8580** (85.8%) | **23.1%** |
-| **p=1** | Fully Connected | 7 | **7** | 5 | 5 | **0** | 6.006 | **0.8580** (85.8%) | **23.1%** |
-| **p=2** | Linear Chain (`0-1-2-3`) | 12 | **18** | 10 | 14 | **4** | 5.389 | **0.7699** (77.0%) | **34.4%** |
-| **p=2** | Ring Layout (`0-1-2-3-0`) | 12 | **18** | 10 | 14 | **4** | 5.389 | **0.7699** (77.0%) | **34.4%** |
-| **p=2** | 2D Grid (`2x2`) | 12 | **18** | 10 | 14 | **4** | 5.389 | **0.7699** (77.0%) | **34.4%** |
-| **p=2** | Fully Connected | 12 | **12** | 10 | 10 | **0** | 5.389 | **0.7699** (77.0%) | **34.4%** |
+#### **Empirical Explanation of Matching Results**:
+The routing metrics match on 4-node workloads **not due to a code defect**, but because Qiskit's `DenseLayout` pass selected physical subgraphs `{0, 1, 2, 3}` on Processor A and `{0, 1, 2, 5}` on Processor B. Both selected subgraphs form **isomorphic 4-qubit T-junctions** (centered at physical node `1`). Consequently, the routing pass inserted identical SWAP operations (2 SWAPs at \(p=1\), 3 SWAPs at \(p=2\)).
 
 ---
 
-## 6. Plot Interpretations & Trade-Off Analysis
+### 4.2 Case 2: Graph-Size Routing Sweep (Capacity Limits & SWAP Scaling)
 
-Three publication-quality figures were generated under [`results/plots/`](file:///c:/Projects/QubitX-MaxCut/results/plots):
+Extracted directly from [`results/graph_size_routing_sweep.csv`](file:///c:/Projects/QubitX-MaxCut/results/graph_size_routing_sweep.csv):
 
-### 6.1 `qaoa_performance_by_depth.png`
-- **Observations**:
-  - At \(p=1\), QAOA achieves a high expected cut value of **6.006** (85.8% of theoretical maximum) with a 23.1% probability of sampling an exact optimal solution.
-  - At \(p=2\), the optimal solution sampling probability increases significantly from **23.1% to 34.4%**, demonstrating that deeper QAOA circuits concentrate quantum state probability amplitude around true ground-truth partitions.
-  - The expected cut value for \(p=2\) dropped to 5.389 due to local minima traps in COBYLA optimization under restricted iteration caps.
+| Logical Nodes (\(n\)) | Logical Edges (\(m\)) | Processor ID | Physical Qubits (\(N\)) | Capacity Check | Transpilation Success | Transpiled Depth | Logical 2Q Gates | Transpiled 2Q Gates | SWAP Overhead | Measured Status |
+| :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **5** | 7 | `processor_a_dev` | 5 | **Supported** | **True** | **11** | 7 | 10 | **3** | Supported development transpilation |
+| **5** | 7 | `processor_b_dev` | 7 | **Supported** | **True** | **11** | 7 | 10 | **3** | Supported development transpilation |
+| **6** | 9 | `processor_a_dev` | 5 | **Exceeded** | **False** | — | 9 | — | — | Unsupported: logical qubits (6) > capacity (5) |
+| **6** | 9 | `processor_b_dev` | 7 | **Supported** | **True** | **16** | 9 | 13 | **4** | Supported development transpilation |
+| **7** | 10 | `processor_a_dev` | 5 | **Exceeded** | **False** | — | 9 | — | — | Unsupported: logical qubits (7) > capacity (5) |
+| **7** | 10 | `processor_b_dev` | 7 | **Supported** | **True** | **17** | 10 | 15 | **5** | Supported development transpilation |
 
-### 6.2 `transpilation_depth.png` & `swap_gate_overhead.png`
-- **SWAP Bottleneck Analysis**:
-  - The logical QAOA circuit at \(p=1\) contains 5 two-qubit `RZZ` interactions corresponding to the 5 problem edges.
-  - On a **Linear Chain** (`0-1-2-3`), non-adjacent edges such as `(0, 2)` and `(1, 3)` cannot execute directly. The transpiler inserts **2 routing SWAP gates**, inflating total 2-qubit operations from 5 to 7 and expanding circuit depth from 7 to 11.
-  - **Topology Impact (Ring vs Linear)**: Introducing a single boundary link between qubit 0 and qubit 3 in the **Ring Layout** reduces transpiled circuit depth from **11 down to 8** at \(p=1\), demonstrating how hardware connectivity relieves routing bottlenecks.
-  - **Depth Accumulation**: At \(p=2\), SWAP overhead doubles to **4 SWAP gates**, causing circuit depth to reach **18** on constrained layouts compared to **12** on fully connected topology.
-
----
-
-## 7. Limitations
-
-1. **Development Problem Graph**: Benchmarks were performed on a small 4-node development graph. Larger graphs will exhibit significantly higher SWAP routing scaling.
-2. **Noise-Free Simulation**: Experiments used `AerSimulator` without physical backend noise models (gate errors, thermal relaxation, decoherence).
-3. **Classical Optimization Traps**: COBYLA is a derivative-free local optimizer susceptible to local minima depending on initial parameter seeds.
-4. **Development Coupling Maps**: Transpilation metrics reflect baseline geometric layouts rather than final organizer-provided Processor A/B specs.
+#### **Empirical Explanation of Divergent Behavior**:
+1. **Physical Capacity Hard Limit**: Processor A (\(N=5\)) cannot execute 6-node or 7-node QAOA circuits. The framework safely rejects transpilation (`is_supported = False`), preventing runtime crashes.
+2. **SWAP Overhead Scaling**: Processor B (\(N=7\)) accommodates larger problem graphs up to 7 nodes. However, **more qubits do not eliminate routing bottlenecks**. On 7-node graphs, routing requires **5 SWAP gates**, expanding two-qubit operations from 10 to 15 and inflating circuit depth from 9 to 17.
 
 ---
 
-## 8. Conclusion & Next Steps
+## 5. Distinction Between Evidence, Interpretation, and Limitations
 
-Team **QubitX** has successfully implemented a complete, modular, and verified QAOA Max-Cut benchmarking framework for Qiskit Fall Fest 2026 Phase 1. 
+- **Measured Evidence (Empirical Fact)**:
+  - 4-node QAOA circuit transpiled onto both processors requires 2 SWAPs at \(p=1\) (depth 11) and 3 SWAPs at \(p=2\) (depth 18).
+  - Processor A cannot transpile graphs with \(n > 5\) qubits.
+  - Processor B handles up to 7 nodes, with SWAP overhead scaling linearly: 3 SWAPs (\(n=5\)), 4 SWAPs (\(n=6\)), 5 SWAPs (\(n=7\)).
+- **Interpretation**:
+  - Processor B's advantage in this benchmark stems strictly from physical qubit capacity (\(N=7\) vs \(N=5\)), allowing it to support 6-node and 7-node instances that Processor A cannot fit. It does NOT demonstrate superior routing efficiency on equal-sized 4-node or 5-node workloads.
+- **Limitations & Missing Official Information**:
+  - Official Processor A and Processor B coupling maps, native basis gate sets (e.g. `cz`, `ecr`), and physical noise parameters (\(1Q/2Q\) error rates, readout errors, \(T_1/T_2\) times) remain to be provided by hackathon organizers.
 
-### Key Takeaways:
-- QAOA depth \(p=1\) delivers an **85.8% approximation ratio** on the development graph.
-- Increasing depth to \(p=2\) boosts optimal solution sampling probability to **34.4%**.
-- Hardware connectivity heavily influences transpiled circuit depth, with SWAP overhead adding up to 57% depth inflation on 1D linear topologies.
+---
 
-### Next Steps for Phase 2 / Official Hardware Evaluation:
-1. **Plug in Official Processor A and Processor B Specs**: Replace development coupling maps in `src/transpilation.py` with official IBM/hackathon target backend topologies.
-2. **Incorporate Noisy Aer Simulations**: Apply real noise models (readout error, single/two-qubit gate errors) from official processor backends to evaluate noise degradation.
-3. **Advanced Optimizers**: Integrate global parameter optimizers (e.g. SPSA, Adam, or parameter initialization heuristics) to avoid COBYLA local traps.
+## 6. Conclusion & Next Steps
+
+Team **QubitX** has delivered a fully verified comparative framework adhering directly to the Phase 1 core principle:
+- **Measured Evidence**: Empirical metrics recorded across controlled Processor A and Processor B benchmarks.
+- **Architectural Understanding**: Subgraph isomorphism and capacity scaling fully explained through transpiler layout diagnostics.
+- **Pluggable Architecture**: Ready to load official organizer `.json` specifications instantly upon release.

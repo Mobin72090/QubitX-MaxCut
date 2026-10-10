@@ -2,6 +2,8 @@
 """Utilities for creating and validating weighted Max-Cut graphs."""
 
 import networkx as nx
+import numpy as np
+
 
 
 def create_sample_graph() -> nx.Graph:
@@ -22,6 +24,44 @@ def create_sample_graph() -> nx.Graph:
     )
 
     return graph
+
+
+def create_synthetic_graph(num_nodes: int, seed: int = 42) -> nx.Graph:
+    """Create a reproducible connected weighted Max-Cut graph of arbitrary size.
+
+    Args:
+        num_nodes: Number of vertices (must be >= 2).
+        seed: Random seed for deterministic graph structure and weights.
+
+    Returns:
+        nx.Graph: Connected undirected graph with positive float weights.
+    """
+    if num_nodes < 2:
+        raise ValueError("Synthetic graph must have at least 2 nodes.")
+
+    # Create connectedErdos-Renyi graph or ring + random edges for guaranteed connectivity
+    g = nx.cycle_graph(num_nodes)
+    rng = np.random.default_rng(seed)
+
+    # Add extra random edges for density
+    possible_edges = [
+        (u, v) for u in range(num_nodes) for v in range(u + 2, num_nodes)
+        if not (u == 0 and v == num_nodes - 1)
+    ]
+    if possible_edges:
+        extra_count = max(1, num_nodes // 2)
+        selected_indices = rng.choice(len(possible_edges), size=min(extra_count, len(possible_edges)), replace=False)
+        for idx in selected_indices:
+            u, v = possible_edges[idx]
+            g.add_edge(u, v)
+
+    # Assign deterministic positive float weights
+    for u, v in g.edges():
+        weight = float(rng.uniform(1.0, 3.0))
+        g[u][v]["weight"] = round(weight, 2)
+
+    return g
+
 
 
 def validate_graph(graph: nx.Graph) -> None:

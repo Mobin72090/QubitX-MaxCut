@@ -1,0 +1,7 @@
+logical_nodes,logical_edges,processor_id,processor_name,physical_qubits,qaoa_depth_p,is_supported,transpilation_success,orig_depth,orig_2q_gates,transpiled_depth,transpiled_2q_gates,transpiled_swap_count,swap_overhead,transpilation_time_sec,notes
+5,7,processor_a_dev,Processor A (Development 5-Qubit Tree),5,1,True,True,8,7,11.0,10.0,3.0,3.0,0.00899,Supported development transpilation
+5,7,processor_b_dev,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),7,1,True,True,8,7,11.0,10.0,3.0,3.0,0.00933,Supported development transpilation
+6,9,processor_a_dev,Processor A (Development 5-Qubit Tree),5,1,False,False,10,9,,,,,0.0,Unsupported: logical qubits (6) exceed physical capacity (5)
+6,9,processor_b_dev,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),7,1,True,True,10,9,16.0,13.0,4.0,4.0,0.00931,Supported development transpilation
+7,10,processor_a_dev,Processor A (Development 5-Qubit Tree),5,1,False,False,9,10,,,,,0.0,Unsupported: logical qubits (7) exceed physical capacity (5)
+7,10,processor_b_dev,Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit),7,1,True,True,9,10,17.0,15.0,5.0,5.0,0.01152,Supported development transpilation

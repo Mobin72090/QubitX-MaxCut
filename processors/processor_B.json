@@ -1,17 +1,22 @@
 {
   "processor_id": "processor_B",
-  "processor_name": "Processor B (Provisional 7-Qubit Heavy-Hex Sub-Unit)",
-  "num_qubits": 7,
+  "processor_name": "Processor B (Challenge Kit 9-Qubit Heavy-Hex)",
+  "num_qubits": 9,
   "edges": [
     [0, 1],
     [1, 2],
+    [1, 6],
     [2, 3],
+    [2, 6],
+    [2, 5],
     [3, 4],
-    [1, 5],
-    [3, 6]
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [6, 8],
+    [8, 0]
   ],
-  "configuration_status": "provisional_development_example",
+  "configuration_status": "challenge_kit_supported",
   "is_official_specification": false,
-  "ambiguity_note": "Inferred from Heavy-Hex illustration. Physical node numbering and edge index mapping are unverified and subject to change when official hackathon backend specifications are released by organizers.",
-  "notes": "Provisional 7-qubit topology for SWAP bottleneck benchmarking. Not verified as exact organizer graph."
+  "notes": "Authoritative 9-qubit Heavy-Hex topology from QFF 2026 Processor A/B Benchmark Configuration document. Coupling map verified from simulation configuration (12 undirected connections); hardware noise model remains unverified."
 }

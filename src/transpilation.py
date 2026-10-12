@@ -12,6 +12,8 @@ from qiskit.transpiler import CouplingMap
 from src.graph_utils import validate_graph
 from src.qaoa_builder import build_qaoa_circuit
 
+DOCUMENTED_BASIS_GATES = ["rz", "sx", "x", "cx"]
+
 
 def get_development_coupling_map(
     layout_type: str, num_qubits: int = 4, **kwargs
@@ -140,6 +142,19 @@ def analyze_transpilation(
     transpiled_2q_gates = count_two_qubit_gates(transpiled_qc)
     transpiled_swap_count = count_swap_gates(transpiled_qc)
 
+    # Calculate CX count under documented challenge basis ['cx', 'rz', 'sx', 'x']
+    if basis_gates is not None and "cx" in basis_gates:
+        transpiled_cx_count = int(transpiled_qc.count_ops().get("cx", 0))
+    else:
+        basis_qc = transpile(
+            circuit,
+            coupling_map=coupling_map,
+            basis_gates=["cx", "rz", "sx", "x"],
+            optimization_level=optimization_level,
+            seed_transpiler=seed_transpiler,
+        )
+        transpiled_cx_count = int(basis_qc.count_ops().get("cx", 0))
+
     # SWAP overhead inserted specifically for routing
     swap_overhead = max(0, transpiled_swap_count - orig_swap_count)
 
@@ -157,6 +172,7 @@ def analyze_transpilation(
         "transpiled_2q_gates": transpiled_2q_gates,
         "transpiled_swap_count": transpiled_swap_count,
         "swap_overhead": swap_overhead,
+        "transpiled_cx_count": transpiled_cx_count,
         "transpilation_time_sec": round(elapsed_time, 5),
     }
 

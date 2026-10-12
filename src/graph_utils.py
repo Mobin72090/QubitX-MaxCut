@@ -26,6 +26,63 @@ def create_sample_graph() -> nx.Graph:
     return graph
 
 
+def create_pso1_6node_graph(instance_id: int = 1) -> nx.Graph:
+    """Create PS-O1 specified 6-node weighted graphs with integer weights 1-5.
+
+    The PS-O1 problem statement requires providing 2-3 example graphs with 6 nodes
+    and integer weights in range 1 to 5.
+
+    Args:
+        instance_id: Identifier for the example graph (1, 2, or 3).
+
+    Returns:
+        nx.Graph: 6-node connected graph with integer edge weights 1-5.
+    """
+    g = nx.Graph()
+    if instance_id == 1:
+        # 6 nodes, 8 edges, integer weights 1-5
+        edges = [
+            (0, 1, 2),
+            (0, 2, 4),
+            (1, 2, 1),
+            (1, 3, 5),
+            (2, 4, 3),
+            (3, 4, 2),
+            (3, 5, 4),
+            (4, 5, 1),
+        ]
+    elif instance_id == 2:
+        # 6 nodes, 9 edges, integer weights 1-5
+        edges = [
+            (0, 1, 3),
+            (1, 2, 2),
+            (2, 3, 5),
+            (3, 4, 1),
+            (4, 5, 4),
+            (5, 0, 2),
+            (0, 3, 3),
+            (1, 4, 1),
+            (2, 5, 4),
+        ]
+    elif instance_id == 3:
+        # 6 nodes, 7 edges, integer weights 1-5
+        edges = [
+            (0, 1, 5),
+            (1, 2, 4),
+            (2, 3, 3),
+            (3, 4, 2),
+            (4, 5, 1),
+            (0, 3, 4),
+            (1, 4, 3),
+        ]
+    else:
+        raise ValueError(f"Instance ID {instance_id} must be 1, 2, or 3.")
+
+    g.add_weighted_edges_from(edges)
+    return g
+
+
+
 def create_synthetic_graph(num_nodes: int, seed: int = 42) -> nx.Graph:
     """Create a reproducible connected weighted Max-Cut graph of arbitrary size.
 

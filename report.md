@@ -62,7 +62,7 @@ For a depth-\(p\) QAOA circuit with parameter vectors \(\boldsymbol{\gamma} = (\
 
 The repository follows a clean, modular structure in [`src/`](src/):
 
-- **[`src/graph_utils.py`](src/graph_utils.py)**: Defines NetworkX graph creation (`create_sample_graph`, `create_pso1_6node_graph`, `create_synthetic_graph`), graph validation, cut value evaluation, and `solve_max_cut_brute_force()` to establish exact ground-truth baselines.
+- **[`src/graph_utils.py`](src/graph_utils.py)**: Defines NetworkX graph creation (`create_sample_graph`, `create_pso1_6node_graph`, `create_pso1_reference_graph`, `create_synthetic_graph`), graph validation, cut value evaluation, and `solve_max_cut_brute_force()` to establish exact ground-truth baselines.
 - **[`src/qaoa_builder.py`](src/qaoa_builder.py)**: Builds parameterized Qiskit `QuantumCircuit` instances, handles Qiskit right-to-left bitstring endianness (`bitstring[-1]` \(\rightarrow\) qubit 0), computes expected cut values \(\langle C \rangle\), and optimizes parameters using SciPy `COBYLA`.
 - **[`src/processors.py`](src/processors.py)**: Loads JSON processor specifications (`processors/processor_A.json`, `processors/processor_B.json`), validates node range/self-loops/duplicates/connectivity, converts to bidirectional Qiskit `CouplingMap`s, and provides layout inspection diagnostics (`inspect_processor_transpilation_layouts`).
 - **[`src/transpilation.py`](src/transpilation.py)**: Generates coupling maps, validates connectivity, counts actual 2-qubit instructions (`op.num_qubits == 2`), exports basis gates `DOCUMENTED_BASIS_GATES = ['rz', 'sx', 'x', 'cx']`, and calculates routing SWAP overhead.
@@ -82,7 +82,8 @@ To ensure valid comparative evidence, parameters were held strictly constant acr
      - Instance 1 (6 nodes, 8 edges, weights \(\{2, 4, 1, 5, 3, 2, 4, 1\}\)): Exact ground-truth cut = **19.0** (4 optimal bitstrings: `001100`, `011001`, `100110`, `110011`).
      - Instance 2 (6 nodes, 9 edges, weights \(\{3, 2, 5, 1, 4, 2, 3, 1, 4\}\)): Exact ground-truth cut = **25.0** (2 optimal bitstrings: `010101`, `101010`).
      - Instance 3 (6 nodes, 7 edges, weights \(\{5, 4, 3, 2, 1, 4, 3\}\)): Exact ground-truth cut = **22.0** (2 optimal bitstrings: `010101`, `101010`).
-  3. **Synthetic Scaling Sweep Graphs (5, 6, 7 nodes)**: Connected graphs with seed `42`.
+  3. **PS-O1 Erdős–Rényi Reference Graph (6 nodes, 9 edges, integer weights 1–5)**: Generated using $G(n=6, p=0.5)$ with topology seed `42` and weight seed `42`. Exact ground-truth cut = **16.0** (2 optimal bitstrings: `001011`, `110100`).
+  4. **Synthetic Scaling Sweep Graphs (5, 6, 7 nodes)**: Connected graphs with seed `42`.
 - **Simulation Engine**: Qiskit Aer (`AerSimulator`, in ideal/noiseless mode and calibrated synthetic-noise mode).
 - **Optimization Strategy**: SciPy `COBYLA` with deterministic seeds.
 - **Random Seeds**:
@@ -144,6 +145,57 @@ All three six-node weighted graph instances were evaluated using QAOA with **p =
 - **Solution quality:** At p = 1, the best sampled cuts reached 100.00% of the exact optimum for Instance 1, 48.00% for Instance 2, and 95.45% for Instance 3.
 - **Metric interpretation:** CX counts are based on the documented transpilation basis `['cx', 'rz', 'sx', 'x']`. These counts and SWAP values are development metrics, not verified physical-hardware resource measurements.
 - **Configuration caveat:** Processor configurations and topology are development specifications. The results do not establish organizer approval, official device noise characteristics, or execution on physical hardware.
+
+---
+
+### 5.2.1 Case 2B: Reproducible PS-O1 Reference Graph
+
+In addition to the three predefined six-node test instances, we evaluated a separately generated reference graph using the Erdős–Rényi graph model specified in the PS-O1 problem description.
+
+**Graph-generation configuration**
+
+- Graph model: Erdős–Rényi \(G(n,p)\)
+- Number of nodes: \(n=6\)
+- Edge probability: \(p=0.5\)
+- Topology seed: `42`
+- Edge-weight range: integers from 1 to 5
+- Edge-weight seed: `42` (an explicit reproducibility choice; the guide does not prescribe a separate weight-generation seed)
+- Exact Max-Cut value: **16.0**, determined by exhaustive enumeration of all 64 binary assignments.
+
+The generated weighted edges are:
+
+| Node 1 | Node 2 | Weight |
+|---:|---:|---:|
+| 0 | 2 | 1 |
+| 0 | 3 | 1 |
+| 0 | 4 | 3 |
+| 1 | 4 | 2 |
+| 1 | 5 | 2 |
+| 2 | 3 | 2 |
+| 2 | 4 | 1 |
+| 3 | 4 | 5 |
+| 3 | 5 | 1 |
+
+**Processor A/B development benchmark**
+
+The benchmark used QAOA depths \(p=1\) and \(p=2\), 2,048 shots, a maximum of 40 optimizer iterations, simulator seed `42`, transpiler seed `42`, and transpiler optimization level 1.
+
+| QAOA depth | Processor | Capacity status | Exact optimum | Expected cut | Approximation ratio | Transpiled depth | Transpiled 2Q gates | SWAP count |
+|:---:|:---|:---|---:|---:|---:|---:|---:|---:|
+| 1 | Processor A | Unsupported | 16.0 | 10.9653 | 68.53% | — | — | — |
+| 1 | Processor B | Supported | 16.0 | 10.9653 | 68.53% | 11 | 10 | 1 |
+| 2 | Processor A | Unsupported | 16.0 | 10.1479 | 63.42% | — | — | — |
+| 2 | Processor B | Supported | 16.0 | 10.1479 | 63.42% | 20 | 20 | 2 |
+
+Results were exported to [`results/tables/pso1_reference_processor_ab.csv`](results/tables/pso1_reference_processor_ab.csv) and the matching output locations created by the benchmark function.
+
+**Interpretation and limitations**
+
+Processor A has five physical qubits and cannot accommodate this six-logical-qubit problem under the project's capacity rule. Processor B has nine physical qubits and supports the transpilation.
+
+The expected cut values are identical for both processor rows at each QAOA depth because the benchmark optimizes the logical QAOA problem once and then evaluates processor capacity and transpilation metrics. These rows do not represent separate processor-specific noisy executions. The depth, two-qubit gate, and SWAP metrics are development transpilation results, not measurements from physical quantum hardware.
+
+This reference graph is distinct from the three predefined PS-O1 test instances and the four-node development graph. Results from these experiments should be compared only with their graph definitions and benchmark settings clearly identified.
 
 ---
 

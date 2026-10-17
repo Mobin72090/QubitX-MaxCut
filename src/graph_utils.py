@@ -1,9 +1,10 @@
 
 """Utilities for creating and validating weighted Max-Cut graphs."""
 
+import random
+
 import networkx as nx
 import numpy as np
-
 
 
 def create_sample_graph() -> nx.Graph:
@@ -12,7 +13,6 @@ def create_sample_graph() -> nx.Graph:
     This is an example graph, not official hackathon-provided data.
     """
     graph = nx.Graph()
-
     graph.add_weighted_edges_from(
         [
             (0, 1, 2.0),
@@ -22,25 +22,21 @@ def create_sample_graph() -> nx.Graph:
             (2, 3, 1.0),
         ]
     )
-
     return graph
 
 
 def create_pso1_6node_graph(instance_id: int = 1) -> nx.Graph:
-    """Create PS-O1 specified 6-node weighted graphs with integer weights 1-5.
+    """Create one of three predefined six-node weighted test graphs.
 
-    The PS-O1 problem statement requires providing 2-3 example graphs with 6 nodes
-    and integer weights in range 1 to 5.
+    These are custom example graphs, not randomly generated reference graphs.
 
     Args:
-        instance_id: Identifier for the example graph (1, 2, or 3).
+        instance_id: Graph identifier: 1, 2, or 3.
 
     Returns:
-        nx.Graph: 6-node connected graph with integer edge weights 1-5.
+        An undirected graph with integer edge weights from 1 to 5.
     """
-    g = nx.Graph()
     if instance_id == 1:
-        # 6 nodes, 8 edges, integer weights 1-5
         edges = [
             (0, 1, 2),
             (0, 2, 4),
@@ -52,7 +48,6 @@ def create_pso1_6node_graph(instance_id: int = 1) -> nx.Graph:
             (4, 5, 1),
         ]
     elif instance_id == 2:
-        # 6 nodes, 9 edges, integer weights 1-5
         edges = [
             (0, 1, 3),
             (1, 2, 2),
@@ -65,7 +60,6 @@ def create_pso1_6node_graph(instance_id: int = 1) -> nx.Graph:
             (2, 5, 4),
         ]
     elif instance_id == 3:
-        # 6 nodes, 7 edges, integer weights 1-5
         edges = [
             (0, 1, 5),
             (1, 2, 4),
@@ -76,61 +70,112 @@ def create_pso1_6node_graph(instance_id: int = 1) -> nx.Graph:
             (1, 4, 3),
         ]
     else:
-        raise ValueError(f"Instance ID {instance_id} must be 1, 2, or 3.")
+        raise ValueError(
+            f"Instance ID {instance_id} must be 1, 2, or 3."
+        )
 
-    g.add_weighted_edges_from(edges)
-    return g
+    graph = nx.Graph()
+    graph.add_weighted_edges_from(edges)
+    validate_graph(graph)
+    return graph
 
 
+def create_pso1_reference_graph(
+    seed: int = 42,
+    weight_seed: int = 42,
+) -> nx.Graph:
+    """Create the guide-based six-node PS-O1 reference graph.
 
-def create_synthetic_graph(num_nodes: int, seed: int = 42) -> nx.Graph:
-    """Create a reproducible connected weighted Max-Cut graph of arbitrary size.
+    The graph topology follows G(n=6, p=0.5), using seed=42 by
+    default. Integer edge weights from 1 to 5 are generated using
+    a separate, explicit seed for reproducibility.
+
+    Note:
+        The guide specifies the topology seed but does not specify
+        a separate seed for assigning edge weights.
+    """
+    graph = nx.erdos_renyi_graph(
+        n=6,
+        p=0.5,
+        seed=seed,
+    )
+
+    rng = random.Random(weight_seed)
+
+    for u, v in graph.edges():
+        graph[u][v]["weight"] = rng.randint(1, 5)
+
+    validate_graph(graph)
+    return graph
+
+
+def create_synthetic_graph(
+    num_nodes: int,
+    seed: int = 42,
+) -> nx.Graph:
+    """Create a reproducible connected weighted graph.
+
+    This function uses a cycle plus additional random edges.
+    It is not the PS-O1 Erdős–Rényi reference generator.
 
     Args:
-        num_nodes: Number of vertices (must be >= 2).
-        seed: Random seed for deterministic graph structure and weights.
+        num_nodes: Number of vertices; must be at least 2.
+        seed: Random seed for deterministic structure and weights.
 
     Returns:
-        nx.Graph: Connected undirected graph with positive float weights.
+        A connected undirected graph with positive float weights.
     """
     if num_nodes < 2:
-        raise ValueError("Synthetic graph must have at least 2 nodes.")
+        raise ValueError(
+            "Synthetic graph must have at least 2 nodes."
+        )
 
-    # Create connectedErdos-Renyi graph or ring + random edges for guaranteed connectivity
-    g = nx.cycle_graph(num_nodes)
+    graph = nx.cycle_graph(num_nodes)
     rng = np.random.default_rng(seed)
 
-    # Add extra random edges for density
     possible_edges = [
-        (u, v) for u in range(num_nodes) for v in range(u + 2, num_nodes)
+        (u, v)
+        for u in range(num_nodes)
+        for v in range(u + 2, num_nodes)
         if not (u == 0 and v == num_nodes - 1)
     ]
+
     if possible_edges:
         extra_count = max(1, num_nodes // 2)
-        selected_indices = rng.choice(len(possible_edges), size=min(extra_count, len(possible_edges)), replace=False)
+        selected_indices = rng.choice(
+            len(possible_edges),
+            size=min(extra_count, len(possible_edges)),
+            replace=False,
+        )
+
         for idx in selected_indices:
             u, v = possible_edges[idx]
-            g.add_edge(u, v)
+            graph.add_edge(u, v)
 
-    # Assign deterministic positive float weights
-    for u, v in g.edges():
+    for u, v in graph.edges():
         weight = float(rng.uniform(1.0, 3.0))
-        g[u][v]["weight"] = round(weight, 2)
+        graph[u][v]["weight"] = round(weight, 2)
 
-    return g
-
+    validate_graph(graph)
+    return graph
 
 
 def validate_graph(graph: nx.Graph) -> None:
-    """Validate that a graph is suitable for weighted Max-Cut."""
+    """Validate a graph for weighted Max-Cut."""
     if graph.number_of_nodes() < 2:
-        raise ValueError("The graph must contain at least two nodes.")
+        raise ValueError(
+            "The graph must contain at least two nodes."
+        )
 
     if graph.number_of_edges() == 0:
-        raise ValueError("The graph must contain at least one edge.")
+        raise ValueError(
+            "The graph must contain at least one edge."
+        )
 
     if graph.is_directed():
-        raise ValueError("Max-Cut requires an undirected graph.")
+        raise ValueError(
+            "Max-Cut requires an undirected graph."
+        )
 
     for u, v, data in graph.edges(data=True):
         if u == v:
@@ -139,26 +184,37 @@ def validate_graph(graph: nx.Graph) -> None:
         weight = data.get("weight")
 
         if weight is None:
-            raise ValueError(f"Edge ({u}, {v}) is missing a weight.")
+            raise ValueError(
+                f"Edge ({u}, {v}) is missing a weight."
+            )
 
         if not isinstance(weight, (int, float)):
-            raise ValueError(f"Edge ({u}, {v}) must have a numeric weight.")
+            raise ValueError(
+                f"Edge ({u}, {v}) must have a numeric weight."
+            )
 
-        if weight <= 0 or not float(weight) < float("inf"):
+        if not np.isfinite(weight) or weight <= 0:
             raise ValueError(
                 f"Edge ({u}, {v}) must have a finite positive weight."
             )
 
 
-def calculate_cut_value(graph: nx.Graph, partition: dict) -> float:
+def calculate_cut_value(
+    graph: nx.Graph,
+    partition: dict,
+) -> float:
     """Calculate the total weight of edges crossing two partitions."""
     validate_graph(graph)
 
     if set(partition.keys()) != set(graph.nodes()):
-        raise ValueError("Every graph node must have a partition assignment.")
+        raise ValueError(
+            "Every graph node must have a partition assignment."
+        )
 
     if not all(side in (0, 1) for side in partition.values()):
-        raise ValueError("Partition assignments must be 0 or 1.")
+        raise ValueError(
+            "Partition assignments must be 0 or 1."
+        )
 
     cut_value = sum(
         data["weight"]
@@ -172,42 +228,47 @@ def calculate_cut_value(graph: nx.Graph, partition: dict) -> float:
 def solve_max_cut_brute_force(
     graph: nx.Graph,
 ) -> tuple[float, dict[int, int], list[dict[int, int]]]:
-    """Find the exact ground-truth Max-Cut value and partition(s) via exhaustive search.
+    """Find the exact Max-Cut value and all optimal partitions.
 
-    Args:
-        graph: NetworkX graph with numeric edge weights.
+    Exhaustively checks all binary partitions. Intended for small graphs.
 
     Returns:
         A tuple containing:
-            - max_cut_value (float): The maximum cut value found.
-            - best_partition (dict): One optimal partition mapping node -> 0 or 1.
-            - all_optimal_partitions (list[dict]): All partitions achieving max_cut_value.
+        - The maximum cut value.
+        - One optimal partition mapping node to 0 or 1.
+        - All optimal partitions.
     """
     validate_graph(graph)
+
     nodes = list(graph.nodes())
     n = len(nodes)
 
     if n > 20:
         raise ValueError(
-            "Brute-force exact solver is restricted to graphs with <= 20 nodes for performance."
+            "Brute-force exact solver is restricted to graphs "
+            "with <= 20 nodes for performance."
         )
 
     max_cut_value = -1.0
     best_partition = {}
     all_optimal_partitions = []
 
-    # Iterate over all 2^n binary partitions
     for i in range(1 << n):
-        # Map bit i to partition assignment for each node index
-        partition = {nodes[k]: (i >> k) & 1 for k in range(n)}
-        val = calculate_cut_value(graph, partition)
+        partition = {
+            nodes[k]: (i >> k) & 1
+            for k in range(n)
+        }
+        value = calculate_cut_value(graph, partition)
 
-        if val > max_cut_value + 1e-9:
-            max_cut_value = val
+        if value > max_cut_value + 1e-9:
+            max_cut_value = value
             best_partition = partition
             all_optimal_partitions = [partition]
-        elif abs(val - max_cut_value) <= 1e-9:
+        elif abs(value - max_cut_value) <= 1e-9:
             all_optimal_partitions.append(partition)
 
-    return max_cut_value, best_partition, all_optimal_partitions
-
+    return (
+        max_cut_value,
+        best_partition,
+        all_optimal_partitions,
+    )

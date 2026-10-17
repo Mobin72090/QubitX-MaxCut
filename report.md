@@ -262,10 +262,46 @@ Extracted from [`results/tables/processor_ab_noisy_comparison.csv`](results/tabl
 
 ---
 
-## 7. Conclusion & Next Steps
+## 7. Proposed Processor D: Connectivity-Aware Architecture
+
+### 7.1 Motivation & Design Goal
+Our empirical benchmarks on Processor A (5-qubit tree) and Processor B (9-qubit Heavy-Hex) demonstrated that two-qubit routing overhead and the resulting circuit depth degradation are predominantly driven by hardware topology bottlenecks. In particular, tree architectures without cycles incur substantial SWAP overhead, whereas sparse planar topologies require multi-hop routing when problem graph interactions do not map directly to physical nearest neighbors.
+
+The primary **design goal** of the conceptual **Processor D** architecture is to systematically reduce SWAP overhead and transpiled circuit depth for combinatorial optimization algorithms such as QAOA applied to weighted Max-Cut graphs, while maintaining physical scalability and fabrication feasibility.
+
+### 7.2 Proposed Modular 9-Qubit Topology
+> **Conceptual Notice:**
+> Processor D is strictly an independent architectural proposal developed by Team QubitX to illustrate connectivity-aware hardware design principles. It is **not** an official Qiskit Fall Fest processor specification, nor is it part of the official Phase 1 Challenge Kit hardware catalog.
+
+The proposed design specifies a **modular 9-qubit topology** structured into a connected central routing core and peripheral modular clusters:
+- **Central Routing Core (3 Qubits)**: A tightly connected 3-qubit triangular hub (e.g., nodes $\{0, 1, 2\}$ with bidirectional couplings $(0,1)$, $(1,2)$, $(2,0)$) providing high local connectivity and low-diameter communication across the chip.
+- **Peripheral Modular Sub-Clusters (6 Qubits)**: Three 2-qubit peripheral modules (e.g., $\{3, 4\}$, $\{5, 6\}$, $\{7, 8\}$), each dedicated to a distinct functional cluster with short-range intra-module coupling.
+- **Inter-Module Bridge Couplings**: Each peripheral module connects to one or two vertices of the central core via dedicated short-range couplers, allowing non-adjacent physical qubits to route across modules through the central core in a maximum graph diameter of 3 to 4 hops.
+
+### 7.3 Architectural Rationale & Trade-offs
+1. **Targeted Routability vs. Full Connectivity**: Dense or all-to-all connectivity trivially eliminates SWAPs, but is physically impractical in superconducting planar circuit QED due to planar wiring constraints and frequency allocation limits. A modular core provides the necessary algebraic connectivity and cycle redundancy to route cyclic and dense problem graph motifs with fewer SWAP operations than linear or tree arrangements.
+2. **Hardware-Control Complexity & Noise Penalty**: Increased connectivity introduces steep physical trade-offs. Each physical coupling line requires microwave control channels, introduces additional capacitive/inductive parasitics, complicates frequency tuning (increasing risk of frequency collisions and $ZZ$ crosstalk), and raises spectator-qubit error rates during multi-qubit gate operations. By constraining the high-connectivity subgraph strictly to the 3-qubit central core and keeping all other couplings short-range, Processor D seeks an optimal Pareto compromise between routing efficiency and physical error susceptibility.
+
+### 7.4 Standardized Evaluation Plan
+To rigorously evaluate Processor D against Processors A and B in future iterations without introducing confounding variables, the evaluation must follow the exact controlled methodology established in Phase 1:
+- **Identical Problem Graphs**: Evaluate on the identical 4-node development instance, the three official PS-O1 6-node instances, the reproducible PS-O1 reference graph, and the 5-to-7 node scaling graphs.
+- **Controlled Algorithmic Parameters**: Maintain identical QAOA depths ($p \in \{1, 2\}$), classical optimizer settings (COBYLA with fixed iteration budgets), measurement shots ($2,048$ for ideal evaluation; $4,096$ for noisy execution), simulator seed `42`, and transpiler seed `42`.
+- **Transpiler & Basis Consistency**: Transpile using identical pass configurations (`optimization_level = 1`) targeting the official native basis set `['cx', 'rz', 'sx', 'x']`.
+- **Calibrated Noise Assumptions**: Apply the identical synthetic Master Guide noise parameters ($p_{1q} = 0.001$, $p_{2q} = 0.005$, $p_{ro} = 0.01$).
+- **Direct Metric Comparison**: Measure and compare empirical metrics: transpiled circuit depth (both routed and native basis), native two-qubit CX gate count, routing SWAP overhead, classical transpilation runtime, ideal expected cut $\langle C \rangle$, approximation ratio, and noisy solution quality retention under depolarizing and readout channels.
+
+### 7.5 Limitations & Conceptual Scope
+- **No Implementation or Measurement Claimed**: Processor D is purely a conceptual architectural blueprint. It has **not** been implemented in code, simulated in Qiskit Aer, or benchmarked within this Phase 1 project.
+- **No Performance Guarantees**: We do not claim or fabricate performance numbers for Processor D, nor do we assert that it outperforms Processor A or Processor B. Any performance advantage remains hypothetical until empirical transpilation and calibration-backed noise simulations are conducted.
+- **Focus of Phase 1**: All empirical findings, CSV tables, and visualizations in Sections 5 and 6 remain strictly confined to the measured evidence obtained on the authoritative Phase 1 hardware models (Processor A and Processor B).
+
+---
+
+## 8. Conclusion & Next Steps
 
 Team **QubitX** has delivered an end-to-end, reproducible solution aligned directly with the Phase 1 rubric:
 - **Measured Evidence**: Demonstrates concrete routing differences between 5-qubit tree (Processor A) and 9-qubit Heavy-Hex (Processor B).
 - **Full Problem Coverage**: Implements both development instances and official PS-O1 6-node weighted graphs.
 - **Synthetic Noise Integration**: Verifies algorithm robustness under Master Guide noise parameters while respecting hardware capacity boundaries.
 - **Automated Validation**: All results exported to `results/tables/` and `results/figures/` and verified via `main.ipynb` and `tests/test_noise.py`.
+- **Architectural Outlook**: Proposes a conceptual connectivity-aware architecture (Processor D) with a standardized evaluation plan for future benchmarking against Processors A and B.
